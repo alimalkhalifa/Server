@@ -20,6 +20,7 @@
 
 #include <unordered_map>
 #include <queue>
+#include <functional>
 
 #include "../common/types.h"
 #include "../common/linked_list.h"
@@ -529,6 +530,9 @@ public:
 	void UpdateAllTraps(bool respawn, bool repopnow = false);
 	void ClearTrapPointers();
 
+	void SetWSApiHandler(std::function<void(const EQApplicationPacket * app)> f) { ws_api_send_packet = f; };
+	void SendPacketToWSApi(const EQApplicationPacket* app) { ws_api_send_packet(app); };
+
 protected:
 	friend class Zone;
 	void	Depop(bool StartSpawnTimer = false);
@@ -560,6 +564,7 @@ private:
 	std::list<Raid *> raid_list;
 	std::list<Area> area_list;
 	std::queue<uint16> free_ids;
+	std::function<void(const EQApplicationPacket * app)> ws_api_send_packet;
 
 	Timer object_timer;
 	Timer door_timer;
