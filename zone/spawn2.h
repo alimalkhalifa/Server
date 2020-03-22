@@ -54,6 +54,7 @@ public:
 	float	GetY()		{ return y; }
 	float	GetZ()		{ return z; }
 	float	GetHeading() { return heading; }
+	uint32	GetGridID() { return grid_; }
 	void	SetRespawnTimer(uint32 newrespawntime) { respawn_ = newrespawntime; };
 	void	SetVariance(uint32 newvariance) { variance_ = newvariance; }
 	const uint32 GetVariance() const { return variance_; }

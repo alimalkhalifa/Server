@@ -961,6 +961,7 @@ Json::Value ApiGetSpawnDetail(EQ::Net::WebsocketServerConnection* connection, Js
 		response["z"] = spawn->GetZ();
 		response["heading"] = spawn->GetHeading();
 		response["spawned_npc_id"] = spawn->SpawnedNPCID();
+		response["grid_id"] = spawn->GetGridID();
 	}
 
 	return response;
@@ -1226,6 +1227,76 @@ Json::Value ApiSetSpawnLocation(EQ::Net::WebsocketServerConnection* connection, 
 	return response;
 }
 
+Json::Value ApiGetGrid(EQ::Net::WebsocketServerConnection* connection, Json::Value params) {
+	Json::Value response;
+
+	if (!params.isArray() || params.size() != 1 || !params[0].isInt()) {
+		response["status"] = "ERROR";
+		response["error"] = "Parameters incorrect, Usage: [grid_id]";
+		return response;
+	}
+	
+	response["id"] = params[0].asInt();
+
+	// Retrieve the wander and pause types for this grid
+	std::string query = StringFormat(
+		"SELECT `type`, `type2` FROM `grid` WHERE `id` = %i AND `zoneid` = %i",
+		params[0].asInt(),
+		zone->GetZoneID()
+	);
+
+	auto results = database.QueryDatabase(query);
+
+	if (!results.Success()) {
+		response["status"] = "ERROR";
+		response["error"] = results.ErrorMessage();
+		return response;
+	}
+
+	if (results.RowCount() == 0) {
+		response["status"] = "ERROR";
+		response["error"] = "No grid found";
+		return response;
+	}
+
+	auto row = results.begin();
+
+	response["wander_type"] = atoi(row[0]);
+	response["pause_type"] = atoi(row[1]);
+
+	query = StringFormat(
+		"SELECT `x`,`y`,`z`,`pause`,`heading`, `centerpoint` "
+		"FROM grid_entries WHERE `gridid` = %i AND `zoneid` = %i "
+		"ORDER BY `number`",
+		params[0].asInt(), zone->GetZoneID());
+	results = database.QueryDatabase(query);
+	if (!results.Success()) {
+		response["status"] = "ERROR";
+		response["error"] = results.ErrorMessage();
+		return response;
+	}
+
+	Json::Value points;
+
+	for (auto row = results.begin(); row != results.end(); ++row)
+	{
+		Json::Value point;
+		point["x"] = atof(row[0]);
+		point["y"] = atof(row[1]);
+		point["z"] = atof(row[2]);
+
+		point["pause"] = atoi(row[3]);
+		point["heading"] = atof(row[4]);
+		point["centerpoint"] = atobool(row[5]);
+		points.append(point);
+	}
+
+	response["points"] = points;
+	response["status"] = "OK";
+
+	return response;
+}
+
 void RegisterApiLogEvent(std::unique_ptr<EQ::Net::WebsocketServer>& server)
 {
 	LogSys.SetConsoleHandler(
@@ -1360,6 +1431,7 @@ void RegisterApiService(std::unique_ptr<EQ::Net::WebsocketServer> &server)
 	server->SetMethodHandler("get_spawn_detail", &ApiGetSpawnDetail, 50);
 	server->SetMethodHandler("get_mob_detail", &ApiGetMobDetail, 50);
 	server->SetMethodHandler("set_spawn_location", &ApiSetSpawnLocation, 50);
+	server->SetMethodHandler("get_grid", &ApiGetGrid, 50);
 
 	RegisterApiLogEvent(server);
 	RegisterApiClientUpdateEvent(server);
