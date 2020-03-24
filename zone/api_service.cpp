@@ -1170,6 +1170,10 @@ Json::Value ApiGetMobDetail(EQ::Net::WebsocketServerConnection* connection, Json
 }
 
 Json::Value ApiSetSpawnLocation(EQ::Net::WebsocketServerConnection* connection, Json::Value params) {
+	if (zone->GetZoneID() == 0) {
+		throw EQ::Net::WebsocketException("Zone must be loaded to invoke this call");
+	}
+
 	Json::Value response;
 
 	if (!params.isArray() || params.size() != 4 || !params[0].isInt() || !params[1].isNumeric() || !params[2].isNumeric() || !params[3].isNumeric()) {
@@ -1228,6 +1232,10 @@ Json::Value ApiSetSpawnLocation(EQ::Net::WebsocketServerConnection* connection, 
 }
 
 Json::Value ApiGetGrid(EQ::Net::WebsocketServerConnection* connection, Json::Value params) {
+	if (zone->GetZoneID() == 0) {
+		throw EQ::Net::WebsocketException("Zone must be loaded to invoke this call");
+	}
+
 	Json::Value response;
 
 	if (!params.isArray() || params.size() != 1 || !params[0].isInt()) {
