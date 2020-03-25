@@ -3426,6 +3426,8 @@ bool Mob::SpellOnTarget(uint16 spell_id, Mob *spelltar, bool reflect, bool use_r
 			bool isproc, int level_override)
 {
 
+	bool isDamageOrLifetapSpell = IsDamageSpell(spell_id) || IsLifetapSpell(spell_id);
+
 	// well we can't cast a spell on target without a target
 	if(!spelltar)
 	{
@@ -3964,7 +3966,7 @@ bool Mob::SpellOnTarget(uint16 spell_id, Mob *spelltar, bool reflect, bool use_r
 		if(IsClient())	// send to caster
 			CastToClient()->QueuePacket(action_packet);
 	}
-	
+
 	message_packet = new EQApplicationPacket(OP_Damage, sizeof(CombatDamage_Struct));
 	CombatDamage_Struct *cd = (CombatDamage_Struct *)message_packet->pBuffer;
 	cd->target = action->target;
@@ -3998,8 +4000,7 @@ bool Mob::SpellOnTarget(uint16 spell_id, Mob *spelltar, bool reflect, bool use_r
 		}
 	}
 
-	if(!IsEffectInSpell(spell_id, SE_BindAffinity)
-	   && !IsDamageSpell(spell_id) && !IsLifetapSpell(spell_id)){ity) && !IsDamageSpell(spell_id)){
+	if(!IsEffectInSpell(spell_id, SE_BindAffinity) && !isDamageOrLifetapSpell){
 		entity_list.QueueCloseClients(
 			spelltar, /* Sender */
 			message_packet, /* Packet */
@@ -4008,6 +4009,19 @@ bool Mob::SpellOnTarget(uint16 spell_id, Mob *spelltar, bool reflect, bool use_r
 			0, /* Skip this mob */
 			true, /* Packet ACK */
 			(spelltar->IsClient() ? FilterPCSpells : FilterNPCSpells) /* Message Filter Type: (8 or 9) */
+		);
+	} else if (isDamageOrLifetapSpell &&
+		(IsClient() ||
+			(HasOwner() &&
+				GetOwner()->IsClient()
+			)
+		)
+	) {
+		(HasOwner() ? GetOwner() : this)->CastToClient()->QueuePacket(
+			message_packet,
+			true,
+			Mob::CLIENT_CONNECTINGALL,
+			(spelltar->IsClient() ? FilterPCSpells : FilterNPCSpells)
 		);
 	}
 	safe_delete(action_packet);
